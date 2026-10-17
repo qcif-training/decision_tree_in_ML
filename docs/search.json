@@ -1,0 +1,428 @@
+[
+  {
+    "objectID": "06_xgboost_regression.html",
+    "href": "06_xgboost_regression.html",
+    "title": "XGBoost Regression with Heart Disease Dataset",
+    "section": "",
+    "text": "Gradient Boosting is a powerful ensemble technique that builds models sequentially. Each new model is trained to correct the errors made by the previous models. The idea is to minimize a loss function (like log loss for regression or MSE for regression) by adding weak learners (usually shallow decision trees) in a stage-wise manner.",
+    "crumbs": [
+      "06_xgboost_regression"
+    ]
+  },
+  {
+    "objectID": "06_xgboost_regression.html#what-is-xgboost",
+    "href": "06_xgboost_regression.html#what-is-xgboost",
+    "title": "XGBoost Regression with Heart Disease Dataset",
+    "section": "🚀 What is XGBoost?",
+    "text": "🚀 What is XGBoost?\nXGBoost (Extreme Gradient Boosting) is an optimized version of gradient boosting that includes several improvements: - Regularization: Prevents overfitting using $ L1 $ and $ L2 $ penalties. - Parallelization: Faster training via parallel tree construction. - Handling of Missing Values: Smart ways to deal with NaNs automatically. - Tree Pruning: Uses a depth-first approach and pruning with a minimum loss reduction (gamma). - Column Subsampling: Introduces randomness (like Random Forest) via colsample_bytree.",
+    "crumbs": [
+      "06_xgboost_regression"
+    ]
+  },
+  {
+    "objectID": "06_xgboost_regression.html#role-of-the-learning-rate",
+    "href": "06_xgboost_regression.html#role-of-the-learning-rate",
+    "title": "XGBoost Regression with Heart Disease Dataset",
+    "section": "📉 Role of the Learning Rate ($ $)",
+    "text": "📉 Role of the Learning Rate ($ $)\nThe learning rate determines how much each tree contributes to the final prediction. It’s one of the most important hyperparameters in XGBoost:\n\n\n\n\n\n\n\nLearning Rate\nBehavior\n\n\n\n\nHigh ($ \\()  | Faster learning but may overfit.                             |\n| Low (\\) $)\nSlower learning, but often better generalization. Needs more trees.\n\n\n\nA small learning rate with a high number of estimators is generally a safer and more robust approach.\n\n📌 Summary:\nGradient Boosting builds an ensemble of models to correct previous mistakes. XGBoost makes this process faster, more regularized, and scalable. The learning rate is a key tuning knob that balances speed and generalization.\nWe will focus on three key hyperparameters: - n_estimators: Number of boosting rounds. - max_depth: Maximum depth of a tree. - learning_rate: Step size shrinkage used to prevent overfitting.\nWe’ll also evaluate model performance and interpret it using SHAP (SHapley Additive exPlanations).\n\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import r2_score\nfrom xgboost import XGBRegressor\nimport shap\nfrom sklearn.metrics import r2_score\nfrom sklearn.datasets import fetch_california_housing\n\n\nhousing = fetch_california_housing(as_frame=True)\ndf = housing.frame\n\nX = housing.data\ny = housing.target\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)",
+    "crumbs": [
+      "06_xgboost_regression"
+    ]
+  },
+  {
+    "objectID": "06_xgboost_regression.html#hyperparameter-tuning-n_estimators",
+    "href": "06_xgboost_regression.html#hyperparameter-tuning-n_estimators",
+    "title": "XGBoost Regression with Heart Disease Dataset",
+    "section": "🔧 Hyperparameter Tuning: n_estimators",
+    "text": "🔧 Hyperparameter Tuning: n_estimators\nThe n_estimators parameter defines the number of boosting rounds (trees). Increasing it can improve performance but might lead to overfitting.\n\nestimators = [150, 200, 300, 500]\ntrain_scores, test_scores = [], []\n\nfor n in estimators:\n    clf = XGBRegressor(n_estimators=n, eval_metric='logloss')\n    clf.fit(X_train, y_train)\n    # y_pred = clf.predict(X_test)\n    # print('R² Score:', r2_score(y_test, y_pred))\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot(estimators, train_scores, marker='o', label='Train R² Score')\nplt.plot(estimators, test_scores, marker='s', label='Test R² Score')\nplt.xlabel('n_estimators')\nplt.ylabel('R² Score')\nplt.title('Effect of n_estimators')\nplt.legend()\nplt.grid(True)\nplt.show()",
+    "crumbs": [
+      "06_xgboost_regression"
+    ]
+  },
+  {
+    "objectID": "06_xgboost_regression.html#hyperparameter-tuning-max_depth",
+    "href": "06_xgboost_regression.html#hyperparameter-tuning-max_depth",
+    "title": "XGBoost Regression with Heart Disease Dataset",
+    "section": "🔧 Hyperparameter Tuning: max_depth",
+    "text": "🔧 Hyperparameter Tuning: max_depth\nThe max_depth parameter controls the complexity of each tree. Deeper trees can learn more complex patterns but may overfit.\n\ndepths = [2, 4, 6, 8, 10]\ntrain_scores, test_scores = [], []\n\nfor d in depths:\n    clf = XGBRegressor(max_depth=d, eval_metric='logloss')\n    clf.fit(X_train, y_train)\n# y_pred = clf.predict(X_test)\n# print('R² Score:', r2_score(y_test, y_pred))\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot(depths, train_scores, marker='o', label='Train R² Score')\nplt.plot(depths, test_scores, marker='s', label='Test R² Score')\nplt.xlabel('max_depth')\nplt.ylabel('R² Score')\nplt.title('Effect of max_depth')\nplt.legend()\nplt.grid(True)\nplt.show()",
+    "crumbs": [
+      "06_xgboost_regression"
+    ]
+  },
+  {
+    "objectID": "06_xgboost_regression.html#hyperparameter-tuning-learning_rate",
+    "href": "06_xgboost_regression.html#hyperparameter-tuning-learning_rate",
+    "title": "XGBoost Regression with Heart Disease Dataset",
+    "section": "🔧 Hyperparameter Tuning: learning_rate",
+    "text": "🔧 Hyperparameter Tuning: learning_rate\nThe learning_rate parameter shrinks the contribution of each tree. Lower values require more trees but improve generalization.\n\nrates = [0.01, 0.05, 0.1, 0.3, 0.5]\ntrain_scores, test_scores = [], []\n\nfor rate in rates:\n    clf = XGBRegressor(learning_rate=rate, eval_metric='logloss')\n    clf.fit(X_train, y_train)\n# y_pred = clf.predict(X_test)\n# print('R² Score:', r2_score(y_test, y_pred))\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot(rates, train_scores, marker='o', label='Train R² Score')\nplt.plot(rates, test_scores, marker='s', label='Test R² Score')\nplt.xlabel('learning_rate')\nplt.ylabel('R² Score')\nplt.title('Effect of learning_rate')\nplt.legend()\nplt.grid(True)\nplt.show()",
+    "crumbs": [
+      "06_xgboost_regression"
+    ]
+  },
+  {
+    "objectID": "06_xgboost_regression.html#feature-importance-with-shap",
+    "href": "06_xgboost_regression.html#feature-importance-with-shap",
+    "title": "XGBoost Regression with Heart Disease Dataset",
+    "section": "🔍 Feature Importance with SHAP",
+    "text": "🔍 Feature Importance with SHAP\nNow let’s interpret the model using SHAP values to see which features were most influential.\n\nfinal_clf = XGBRegressor(learning_rate=0.1, max_depth=10,n_estimators=200, eval_metric='logloss')\nfinal_clf.fit(X_train, y_train)\ny_pred = final_clf.predict(X_test)\nprint('R² Score:', r2_score(y_test, y_pred))\n\n# R² Score\ntrain_acc = final_clf.score(X_train, y_train)\ntest_acc = final_clf.score(X_test, y_test)\n\nprint(f\"Train R² Score: {train_acc:.3f}\")\nprint(f\"Test R² Score: {test_acc:.3f}\")\n\nR² Score: 0.8315977482997928\nTrain R² Score: 0.996\nTest R² Score: 0.832",
+    "crumbs": [
+      "06_xgboost_regression"
+    ]
+  },
+  {
+    "objectID": "06_xgboost_regression.html#feature-importance-with-shap-1",
+    "href": "06_xgboost_regression.html#feature-importance-with-shap-1",
+    "title": "XGBoost Regression with Heart Disease Dataset",
+    "section": "🧠 Feature Importance with SHAP",
+    "text": "🧠 Feature Importance with SHAP\nWe’ll use SHAP (SHapley Additive exPlanations) to understand how different features contribute to the model’s predictions.\nThis helps us: - Identify the most influential features - Understand direction and magnitude of impact\n\n📊 Interpreting the SHAP Summary Plot\nThe SHAP summary plot visualizes how each feature contributes to the model’s output across all samples. Here’s what each component means:\n\n\n\n\n\n\n\nElement\nDescription\n\n\n\n\nY-axis (Feature Names)\nFeatures are sorted by overall importance (top = most important).\n\n\nX-axis (SHAP value)\nThe impact of that feature on the model’s prediction.\n\n\nEach Dot\nA single row/sample in the dataset.\n\n\nColor (Dot Hue)\nThe feature value for that sample — red = high, blue = low.\n\n\nDirection of SHAP Value\nPositive SHAP value pushes the prediction toward the positive class (e.g., “disease” class).\n\n\n\nNegative SHAP value pushes it toward the negative class (e.g., “no disease”).\n\n\n\n🧠 Example Interpretation:\nIf the “Age” feature has mostly red dots (high values) with positive SHAP values, it means higher ages are pushing predictions toward the positive class.\n\nimport matplotlib.pyplot as plt\nimport shap\n\n# Compute SHAP values for both classes\nexplainer = shap.TreeExplainer(final_clf, X_train)\nshap_values = explainer.shap_values(X_test[:100])\n\n# Increase figure size and adjust layout\nplt.figure(figsize=(10, 6))\nshap.summary_plot(shap_values, X_test[:100], show=False)\nplt.title(\"SHAP Summary Plot (Both Classes)\", fontsize=16)\nplt.tight_layout()\nplt.show()",
+    "crumbs": [
+      "06_xgboost_regression"
+    ]
+  },
+  {
+    "objectID": "04_xgboost_classification.html",
+    "href": "04_xgboost_classification.html",
+    "title": "XGBoost Classification with Heart Disease Dataset",
+    "section": "",
+    "text": "# import os\n# # Set working directory manually on Gadi to be able to load csv files\n# user = os.getenv('USER')\n# os.chdir('/scratch/cd82/'+user+'/notebooks/')\nGradient Boosting is a powerful ensemble technique that builds models sequentially. Each new model is trained to correct the errors made by the previous models. The idea is to minimize a loss function (like log loss for classification or MSE for regression) by adding weak learners (usually shallow decision trees) in a stage-wise manner.",
+    "crumbs": [
+      "04_xgboost_classification"
+    ]
+  },
+  {
+    "objectID": "04_xgboost_classification.html#what-is-xgboost",
+    "href": "04_xgboost_classification.html#what-is-xgboost",
+    "title": "XGBoost Classification with Heart Disease Dataset",
+    "section": "🚀 What is XGBoost?",
+    "text": "🚀 What is XGBoost?\nXGBoost (Extreme Gradient Boosting) is an optimized version of gradient boosting that includes several improvements: - Regularization: Prevents overfitting using $ L1 $ and $ L2 $ penalties. - Parallelization: Faster training via parallel tree construction. - Handling of Missing Values: Smart ways to deal with NaNs automatically. - Tree Pruning: Uses a depth-first approach and pruning with a minimum loss reduction (gamma). - Column Subsampling: Introduces randomness (like Random Forest) via colsample_bytree.",
+    "crumbs": [
+      "04_xgboost_classification"
+    ]
+  },
+  {
+    "objectID": "04_xgboost_classification.html#role-of-the-learning-rate",
+    "href": "04_xgboost_classification.html#role-of-the-learning-rate",
+    "title": "XGBoost Classification with Heart Disease Dataset",
+    "section": "📉 Role of the Learning Rate ($ $)",
+    "text": "📉 Role of the Learning Rate ($ $)\nThe learning rate determines how much each tree contributes to the final prediction. It’s one of the most important hyperparameters in XGBoost:\n\n\n\n\n\n\n\nLearning Rate\nBehavior\n\n\n\n\nHigh ($ \\()  | Faster learning but may overfit.                             |\n| Low (\\) $)\nSlower learning, but often better generalization. Needs more trees.\n\n\n\nA small learning rate with a high number of estimators is generally a safer and more robust approach.\n\n📌 Summary:\nGradient Boosting builds an ensemble of models to correct previous mistakes. XGBoost makes this process faster, more regularized, and scalable. The learning rate is a key tuning knob that balances speed and generalization.\nWe will focus on three key hyperparameters: - n_estimators: Number of boosting rounds. - max_depth: Maximum depth of a tree. - learning_rate: Step size shrinkage used to prevent overfitting.\nWe’ll also evaluate model performance and interpret it using SHAP (SHapley Additive exPlanations).\n\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import accuracy_score\nfrom xgboost import XGBClassifier\nimport shap\nfrom sklearn.metrics import classification_report, ConfusionMatrixDisplay\n\ndf = pd.read_csv(\"heart.csv\")\nX = df.drop(\"target\", axis=1)\ny = df[\"target\"]\n\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)",
+    "crumbs": [
+      "04_xgboost_classification"
+    ]
+  },
+  {
+    "objectID": "04_xgboost_classification.html#hyperparameter-tuning-n_estimators",
+    "href": "04_xgboost_classification.html#hyperparameter-tuning-n_estimators",
+    "title": "XGBoost Classification with Heart Disease Dataset",
+    "section": "🔧 Hyperparameter Tuning: n_estimators",
+    "text": "🔧 Hyperparameter Tuning: n_estimators\nThe n_estimators parameter defines the number of boosting rounds (trees). Increasing it can improve performance but might lead to overfitting.\n\nestimators = [3, 5, 25, 30, 35, 50, 100, 150, 200]\ntrain_scores, test_scores = [], []\n\nfor n in estimators:\n    clf = XGBClassifier(n_estimators=n, learning_rate=0.002,  eval_metric='logloss')\n    clf.fit(X_train, y_train)\n    train_scores.append(accuracy_score(y_train, clf.predict(X_train)))\n    test_scores.append(accuracy_score(y_test, clf.predict(X_test)))\n\nplt.plot(estimators, train_scores, marker='o', label='Train Accuracy')\nplt.plot(estimators, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('n_estimators')\nplt.ylabel('Accuracy')\nplt.title('Effect of n_estimators')\nplt.legend()\nplt.grid(True)\nplt.show()",
+    "crumbs": [
+      "04_xgboost_classification"
+    ]
+  },
+  {
+    "objectID": "04_xgboost_classification.html#hyperparameter-tuning-max_depth",
+    "href": "04_xgboost_classification.html#hyperparameter-tuning-max_depth",
+    "title": "XGBoost Classification with Heart Disease Dataset",
+    "section": "🔧 Hyperparameter Tuning: max_depth",
+    "text": "🔧 Hyperparameter Tuning: max_depth\nThe max_depth parameter controls the complexity of each tree. Deeper trees can learn more complex patterns but may overfit.\n\ndepths = [2, 4, 6, 8, 10]\ntrain_scores, test_scores = [], []\n\nfor d in depths:\n    clf = XGBClassifier(max_depth=d, eval_metric='logloss')\n    clf.fit(X_train, y_train)\n    train_scores.append(accuracy_score(y_train, clf.predict(X_train)))\n    test_scores.append(accuracy_score(y_test, clf.predict(X_test)))\n\nplt.plot(depths, train_scores, marker='o', label='Train Accuracy')\nplt.plot(depths, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('max_depth')\nplt.ylabel('Accuracy')\nplt.title('Effect of max_depth')\nplt.legend()\nplt.grid(True)\nplt.show()",
+    "crumbs": [
+      "04_xgboost_classification"
+    ]
+  },
+  {
+    "objectID": "04_xgboost_classification.html#hyperparameter-tuning-learning_rate",
+    "href": "04_xgboost_classification.html#hyperparameter-tuning-learning_rate",
+    "title": "XGBoost Classification with Heart Disease Dataset",
+    "section": "🔧 Hyperparameter Tuning: learning_rate",
+    "text": "🔧 Hyperparameter Tuning: learning_rate\nThe learning_rate parameter shrinks the contribution of each tree. Lower values require more trees but improve generalization.\n\nrates = [0.01, 0.05, 0.1, 0.3, 0.5]\ntrain_scores, test_scores = [], []\n\nfor rate in rates:\n    clf = XGBClassifier(learning_rate=rate, eval_metric='logloss')\n    clf.fit(X_train, y_train)\n    train_scores.append(accuracy_score(y_train, clf.predict(X_train)))\n    test_scores.append(accuracy_score(y_test, clf.predict(X_test)))\n\nplt.plot(rates, train_scores, marker='o', label='Train Accuracy')\nplt.plot(rates, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('learning_rate')\nplt.ylabel('Accuracy')\nplt.title('Effect of learning_rate')\nplt.legend()\nplt.grid(True)\nplt.show()",
+    "crumbs": [
+      "04_xgboost_classification"
+    ]
+  },
+  {
+    "objectID": "04_xgboost_classification.html#feature-importance-with-shap",
+    "href": "04_xgboost_classification.html#feature-importance-with-shap",
+    "title": "XGBoost Classification with Heart Disease Dataset",
+    "section": "🔍 Feature Importance with SHAP",
+    "text": "🔍 Feature Importance with SHAP\nNow let’s interpret the model using SHAP values to see which features were most influential.\n\nfinal_clf = XGBClassifier(learning_rate=0.1, max_depth=10,n_estimators=200, eval_metric='logloss')\nfinal_clf.fit(X_train, y_train)\n\n# Accuracy\ntrain_acc = final_clf.score(X_train, y_train)\ntest_acc = final_clf.score(X_test, y_test)\n\nprint(f\"Train Accuracy: {train_acc:.3f}\")\nprint(f\"Test Accuracy: {test_acc:.3f}\")\n\nTrain Accuracy: 1.000\nTest Accuracy: 0.990\n\n\n\n\ny_pred = final_clf.predict(X_test)\nprint(classification_report(y_test, y_pred))\n\nConfusionMatrixDisplay.from_estimator(final_clf, X_test, y_test)\nplt.title(\"Normalized Confusion Matrix\")\nplt.show()\n\n              precision    recall  f1-score   support\n\n           0       0.98      1.00      0.99       159\n           1       1.00      0.98      0.99       149\n\n    accuracy                           0.99       308\n   macro avg       0.99      0.99      0.99       308\nweighted avg       0.99      0.99      0.99       308",
+    "crumbs": [
+      "04_xgboost_classification"
+    ]
+  },
+  {
+    "objectID": "04_xgboost_classification.html#feature-importance-with-shap-1",
+    "href": "04_xgboost_classification.html#feature-importance-with-shap-1",
+    "title": "XGBoost Classification with Heart Disease Dataset",
+    "section": "🧠 Feature Importance with SHAP",
+    "text": "🧠 Feature Importance with SHAP\nWe’ll use SHAP (SHapley Additive exPlanations) to understand how different features contribute to the model’s predictions.\nThis helps us: - Identify the most influential features - Understand direction and magnitude of impact\n\n📊 Interpreting the SHAP Summary Plot\nThe SHAP summary plot visualizes how each feature contributes to the model’s output across all samples. Here’s what each component means:\n\n\n\n\n\n\n\nElement\nDescription\n\n\n\n\nY-axis (Feature Names)\nFeatures are sorted by overall importance (top = most important).\n\n\nX-axis (SHAP value)\nThe impact of that feature on the model’s prediction.\n\n\nEach Dot\nA single row/sample in the dataset.\n\n\nColor (Dot Hue)\nThe feature value for that sample — red = high, blue = low.\n\n\nDirection of SHAP Value\nPositive SHAP value pushes the prediction toward the positive class (e.g., “disease” class).\n\n\n\nNegative SHAP value pushes it toward the negative class (e.g., “no disease”).\n\n\n\n🧠 Example Interpretation:\nIf the “Age” feature has mostly red dots (high values) with positive SHAP values, it means higher ages are pushing predictions toward the positive class.\n\nimport shap\n\nexplainer = shap.Explainer(final_clf, X_train)\nn_datapoints = 100\nshap_values = explainer(X_test[:n_datapoints])\n\nshap.summary_plot(shap_values, X_test[:n_datapoints])",
+    "crumbs": [
+      "04_xgboost_classification"
+    ]
+  },
+  {
+    "objectID": "02_decision_tree_classification.html",
+    "href": "02_decision_tree_classification.html",
+    "title": "🌳 Decision Tree Classification with Heart Disease Dataset",
+    "section": "",
+    "text": "# import os\n# # Set working directory manually on Gadi to be able to load csv files\n# user = os.getenv('USER')\n# os.chdir('/scratch/cd82/'+user+'/notebooks/')"
+  },
+  {
+    "objectID": "02_decision_tree_classification.html#what-is-a-decision-tree",
+    "href": "02_decision_tree_classification.html#what-is-a-decision-tree",
+    "title": "🌳 Decision Tree Classification with Heart Disease Dataset",
+    "section": "What is a Decision Tree?",
+    "text": "What is a Decision Tree?\nA Decision Tree is a supervised machine learning model that splits the data into branches to make predictions. It works by asking a series of yes/no questions (based on features) to divide the data until a decision is made.\n\nKey Concepts:\n\nGini Impurity or Entropy is used to determine the best feature and threshold to split at each node.\nDecision Trees are interpretable, but they can overfit the training data."
+  },
+  {
+    "objectID": "02_decision_tree_classification.html#common-hyperparameters",
+    "href": "02_decision_tree_classification.html#common-hyperparameters",
+    "title": "🌳 Decision Tree Classification with Heart Disease Dataset",
+    "section": "Common Hyperparameters",
+    "text": "Common Hyperparameters\n\nmax_depth: Limits how deep the tree can go (helps prevent overfitting).\nmin_samples_split: Minimum number of samples required to split an internal node.\nmin_samples_leaf: Minimum number of samples that a leaf node must have.\n\n\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nfrom sklearn.tree import DecisionTreeClassifier, plot_tree\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import classification_report, ConfusionMatrixDisplay, accuracy_score\nimport shap\n\n# Load the dataset\ndf = pd.read_csv(\"heart.csv\")\nX = df.drop(\"target\", axis=1)\ny = df[\"target\"]\n\n# Train-test split\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)"
+  },
+  {
+    "objectID": "02_decision_tree_classification.html#hyperparameter-1-max_depth",
+    "href": "02_decision_tree_classification.html#hyperparameter-1-max_depth",
+    "title": "🌳 Decision Tree Classification with Heart Disease Dataset",
+    "section": "🌲 Hyperparameter 1: max_depth",
+    "text": "🌲 Hyperparameter 1: max_depth\nmax_depth controls how deep the decision tree can grow. A shallow tree (e.g., max_depth=2) may underfit the data, while a very deep tree (e.g., None = no limit) may overfit the training set.\nBelow, we train several models with different max_depth values and observe the training and test accuracy.\n\ndepths = [2, 4, 6, 8, None]\ntrain_scores, test_scores = [], []\n\nfor d in depths:\n    clf = DecisionTreeClassifier(max_depth=d, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(clf.score(X_train, y_train))\n    test_scores.append(clf.score(X_test, y_test))\n\ndepth_labels = [str(d) if d is not None else \"None\" for d in depths]\nplt.plot(depth_labels, train_scores, marker='o', label='Train Accuracy')\nplt.plot(depth_labels, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('max_depth')\nplt.ylabel('Accuracy')\nplt.title('Effect of max_depth on Accuracy')\nplt.legend()\nplt.grid(True)\nplt.show()"
+  },
+  {
+    "objectID": "02_decision_tree_classification.html#hyperparameter-2-min_samples_split",
+    "href": "02_decision_tree_classification.html#hyperparameter-2-min_samples_split",
+    "title": "🌳 Decision Tree Classification with Heart Disease Dataset",
+    "section": "✂️ Hyperparameter 2: min_samples_split",
+    "text": "✂️ Hyperparameter 2: min_samples_split\nThis parameter defines the minimum number of samples required to split an internal node.\n\nHigher values prevent the tree from splitting too soon, which can reduce overfitting.\nLower values allow the tree to grow deeper, which can increase accuracy but also risk overfitting.\n\nLet’s observe how changing min_samples_split impacts model performance.\n\nmin_samples = [2, 5, 10, 20, 50]\ntrain_scores, test_scores = [], []\n\nfor min_split in min_samples:\n    clf = DecisionTreeClassifier(min_samples_split=min_split, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(clf.score(X_train, y_train))\n    test_scores.append(clf.score(X_test, y_test))\n\nplt.plot(min_samples, train_scores, marker='o', label='Train Accuracy')\nplt.plot(min_samples, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('min_samples_split')\nplt.ylabel('Accuracy')\nplt.title('Effect of min_samples_split on Accuracy')\nplt.legend()\nplt.grid(True)\nplt.show()"
+  },
+  {
+    "objectID": "02_decision_tree_classification.html#hyperparameter-3-min_samples_leaf",
+    "href": "02_decision_tree_classification.html#hyperparameter-3-min_samples_leaf",
+    "title": "🌳 Decision Tree Classification with Heart Disease Dataset",
+    "section": "🍃 Hyperparameter 3: min_samples_leaf",
+    "text": "🍃 Hyperparameter 3: min_samples_leaf\nThis parameter controls the minimum number of samples required to be at a leaf node.\n\nIt prevents the model from learning from very small subsets of data.\nLarger values make the model more conservative and help reduce overfitting.\n\nWe’ll now test how different values for min_samples_leaf affect the performance of our Decision Tree.\n\nmin_leaves = [1, 2, 5, 10, 20]\ntrain_scores, test_scores = [], []\n\nfor min_leaf in min_leaves:\n    clf = DecisionTreeClassifier(min_samples_leaf=min_leaf, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(clf.score(X_train, y_train))\n    test_scores.append(clf.score(X_test, y_test))\n\nplt.plot(min_leaves, train_scores, marker='o', label='Train Accuracy')\nplt.plot(min_leaves, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('min_samples_leaf')\nplt.ylabel('Accuracy')\nplt.title('Effect of min_samples_leaf on Accuracy')\nplt.legend()\nplt.grid(True)\nplt.show()"
+  },
+  {
+    "objectID": "02_decision_tree_classification.html#final-model-with-selected-hyperparameters",
+    "href": "02_decision_tree_classification.html#final-model-with-selected-hyperparameters",
+    "title": "🌳 Decision Tree Classification with Heart Disease Dataset",
+    "section": "✅ Final Model with Selected Hyperparameters",
+    "text": "✅ Final Model with Selected Hyperparameters\nWe’ll now train a final Decision Tree model using the best combination of parameters observed in our experiments. Then we’ll use SHAP to interpret feature importance.\n\n# Final model (tuned)\nfinal_clf = DecisionTreeClassifier(max_depth=6, min_samples_split=10, min_samples_leaf=5, random_state=42)\nfinal_clf.fit(X_train, y_train)\n\n# Accuracy\ntrain_acc = final_clf.score(X_train, y_train)\ntest_acc = final_clf.score(X_test, y_test)\n\nprint(f\"Train Accuracy: {train_acc:.3f}\")\nprint(f\"Test Accuracy: {test_acc:.3f}\")\n\nTrain Accuracy: 0.937\nTest Accuracy: 0.873\n\n\n\n\ny_pred = final_clf.predict(X_test)\nprint(classification_report(y_test, y_pred))\n\nConfusionMatrixDisplay.from_estimator(final_clf, X_test, y_test)\nplt.title(\"Normalized Confusion Matrix\")\nplt.show()\n\n              precision    recall  f1-score   support\n\n           0       0.92      0.82      0.87       159\n           1       0.83      0.93      0.88       149\n\n    accuracy                           0.87       308\n   macro avg       0.88      0.88      0.87       308\nweighted avg       0.88      0.87      0.87       308"
+  },
+  {
+    "objectID": "02_decision_tree_classification.html#feature-importance-with-shap",
+    "href": "02_decision_tree_classification.html#feature-importance-with-shap",
+    "title": "🌳 Decision Tree Classification with Heart Disease Dataset",
+    "section": "🧠 Feature Importance with SHAP",
+    "text": "🧠 Feature Importance with SHAP\nWe’ll use SHAP (SHapley Additive exPlanations) to understand how different features contribute to the model’s predictions.\nThis helps us: - Identify the most influential features - Understand direction and magnitude of impact\n\n📊 Interpreting the SHAP Summary Plot\nThe SHAP summary plot visualizes how each feature contributes to the model’s output across all samples. Here’s what each component means:\n\n\n\n\n\n\n\nElement\nDescription\n\n\n\n\nY-axis (Feature Names)\nFeatures are sorted by overall importance (top = most important).\n\n\nX-axis (SHAP value)\nThe impact of that feature on the model’s prediction.\n\n\nEach Dot\nA single row/sample in the dataset.\n\n\nColor (Dot Hue)\nThe feature value for that sample — red = high, blue = low.\n\n\nDirection of SHAP Value\nPositive SHAP value pushes the prediction toward the positive class (e.g., “disease” class).\n\n\n\nNegative SHAP value pushes it toward the negative class (e.g., “no disease”).\n\n\n\n🧠 Example Interpretation:\nIf the “Age” feature has mostly red dots (high values) with positive SHAP values, it means higher ages are pushing predictions toward the positive class.\n\nimport shap\n\nexplainer = shap.TreeExplainer(final_clf, X_train)\n\nn_datapoints = 100\nshap_values = explainer.shap_values(X_test[:n_datapoints])\n\nclass_index = 0\nshap.summary_plot(shap_values[:, :, class_index], X_test[:n_datapoints])"
+  },
+  {
+    "objectID": "00_workshop_guide.html",
+    "href": "00_workshop_guide.html",
+    "title": "Decision Tree Methods",
+    "section": "",
+    "text": "A workshop by: QCIF\nhttps://www.qcif.edu.au/",
+    "crumbs": [
+      "Workshop Guide"
+    ]
+  },
+  {
+    "objectID": "00_workshop_guide.html#install-python-recommended-version-3.10-or-newer",
+    "href": "00_workshop_guide.html#install-python-recommended-version-3.10-or-newer",
+    "title": "Decision Tree Methods",
+    "section": "1. Install Python (Recommended: Version 3.10 or newer)",
+    "text": "1. Install Python (Recommended: Version 3.10 or newer)\n\nWindows\n\nGo to the official Python website: https://www.python.org/downloads/\nDownload the latest Python 3.x installer.\nRun the installer and check the box that says:\n\nAdd Python to PATH\n\nChoose Install Now and follow the prompts.\n\nTo verify installation, open Command Prompt (cmd) and type:\npython --version\nYou should see something like:\nPython 3.11.6\n\n\nmacOS / Linux\nMost systems come with Python preinstalled. You can check your version:\npython3 --version\nIf Python is not installed, install it using your system package manager.\nmacOS (Homebrew):\nbrew install python\nUbuntu / Debian:\nsudo apt update && sudo apt install python3 python3-pip -y",
+    "crumbs": [
+      "Workshop Guide"
+    ]
+  },
+  {
+    "objectID": "00_workshop_guide.html#install-jupyterlab",
+    "href": "00_workshop_guide.html#install-jupyterlab",
+    "title": "Decision Tree Methods",
+    "section": "2. Install JupyterLab",
+    "text": "2. Install JupyterLab\nOnce Python is installed, you can install packages using pip.\nRun this command in your terminal or command prompt:\npip install jupyterlab\njupyterlab is used for running notebooks interactively.",
+    "crumbs": [
+      "Workshop Guide"
+    ]
+  },
+  {
+    "objectID": "00_workshop_guide.html#download-notebooks",
+    "href": "00_workshop_guide.html#download-notebooks",
+    "title": "Decision Tree Methods",
+    "section": "3. Download notebooks",
+    "text": "3. Download notebooks\nDownload the workshop notebooks and place them in your desired folder.",
+    "crumbs": [
+      "Workshop Guide"
+    ]
+  },
+  {
+    "objectID": "00_workshop_guide.html#install-required-python-packages",
+    "href": "00_workshop_guide.html#install-required-python-packages",
+    "title": "Decision Tree Methods",
+    "section": "4. Install required Python packages",
+    "text": "4. Install required Python packages\nFor these regression notebooks, the main packages are:\n\nnumpy\npandas\nmatplotlib\nscikit-learn\nstatsmodels\n\nYou can install them with:\npip install numpy pandas matplotlib scikit-learn statsmodels\n\n# Remove # from the line below and run if packages are not installed\n# !pip install numpy pandas matplotlib scikit-learn statsmodels\n\nIf you are running this in a terminal, remove ! from the start of the command.\nThis will install:\n\nnumpy for numerical arrays and basic numerical computing\npandas for tabular data handling\nmatplotlib for plotting\nscikit-learn for machine learning tools such as train/test split, linear models, pipelines, and cross-validation\nstatsmodels for statistical modelling and diagnostics such as OLS summaries and Q-Q plots\n\nTo verify installation, run the code below:\n\nimport importlib.metadata\n\npackages = [\"numpy\", \"pandas\", \"matplotlib\", \"scikit-learn\", \"statsmodels\"]\nfor pkg in packages:\n    try:\n        print(f\"{pkg}: {importlib.metadata.version(pkg)}\")\n    except importlib.metadata.PackageNotFoundError:\n        print(f\"{pkg}: not installed\")\n\nnumpy: 2.3.3\npandas: 2.3.3\nmatplotlib: 3.10.7\nopenai: 2.6.0\nrequests: 2.32.5",
+    "crumbs": [
+      "Workshop Guide"
+    ]
+  },
+  {
+    "objectID": "00_workshop_guide.html#summary",
+    "href": "00_workshop_guide.html#summary",
+    "title": "Decision Tree Methods",
+    "section": "Summary",
+    "text": "Summary\n\nInstall Python 3.10 or newer\nInstall JupyterLab\nInstall the required regression packages\nOpen the notebooks in JupyterLab or Google Colab\nVerify that the packages are available before running the workshop notebooks",
+    "crumbs": [
+      "Workshop Guide"
+    ]
+  },
+  {
+    "objectID": "01_decision_tree_basics.html",
+    "href": "01_decision_tree_basics.html",
+    "title": "Checking Python packages",
+    "section": "",
+    "text": "# import os\n# # Set working directory manually on Gadi to be able to load csv files\n# user = os.getenv('USER')\n# os.chdir('/scratch/cd82/'+user+'/notebooks/')\n# !which python\n# !where python\n# Package installation if not already installed\n# !pip install numpy\n# !pip install scikit-learn\n# import importlib\n# import os\n\n# packages = ['numpy', 'pandas', 'matplotlib', 'seaborn', 'sklearn', 'xgboost', 'shap']\n\n# for pkg in packages:\n#     try:\n#         module = importlib.import_module(pkg)\n#         path = os.path.dirname(module.__file__)\n#         print(f\"{pkg}: {path}\")\n#     except ImportError:\n#         print(f\"{pkg}: Not installed\")",
+    "crumbs": [
+      "01_decision_tree_basics"
+    ]
+  },
+  {
+    "objectID": "01_decision_tree_basics.html#how-it-works",
+    "href": "01_decision_tree_basics.html#how-it-works",
+    "title": "Checking Python packages",
+    "section": "How It Works",
+    "text": "How It Works\n\nFor classification, trees use metrics like Gini impurity or Entropy to decide the best split.\nFor regression, they typically minimize Mean Squared Error (MSE).\n\nThe tree starts at a root and splits the data into branches based on feature thresholds, creating a path to a decision leaf.\n\n🔍 How Splitting Works in Decision Trees\n\n\n🧪 Classification: Gini Impurity and Entropy\nTo decide the best feature and threshold to split on, decision trees evaluate impurity at each possible split. Lower impurity means a better split.\n\n✅ Gini Impurity\nGini measures how often a randomly chosen element would be incorrectly labeled if it was randomly labeled according to the distribution in the node:\n\\[\n\\text{Gini} = 1 - \\sum_{i=1}^{C} p_i^2\n\\]\nWhere: - $ C $ is the number of classes\n- $ p_i $ is the proportion of class $ i $\n\n\n✅ Entropy (Information Gain)\nEntropy measures the disorder or uncertainty of the classes:\n\\[\n\\text{Entropy} = - \\sum_{i=1}^{C} p_i \\log_2(p_i)\n\\]\nA split is chosen to minimize the weighted impurity (Gini or Entropy) of the resulting child nodes.\n\n\n\n\n📈 Regression: Mean Squared Error (MSE)\nIn regression trees, the quality of a split is measured using Mean Squared Error, which calculates how far predictions are from actual values.\n\n✅ MSE Formula\n\\[\n\\text{MSE} = \\frac{1}{n} \\sum_{i=1}^{n} (y_i - \\bar{y})^2\n\\]\nWhere: - $ y_i $ are the true values\n- $ {y} $ is the mean value of the current region\n- $ n $ is the number of samples\nThe best split minimizes the total MSE across the child nodes.\n\n\n\n\n🎯 Final Prediction\n\nClassification Tree: predicts the majority class in a leaf.\nRegression Tree: predicts the mean target value of samples in a leaf.",
+    "crumbs": [
+      "01_decision_tree_basics"
+    ]
+  },
+  {
+    "objectID": "01_decision_tree_basics.html#key-hyperparameters",
+    "href": "01_decision_tree_basics.html#key-hyperparameters",
+    "title": "Checking Python packages",
+    "section": "Key Hyperparameters",
+    "text": "Key Hyperparameters\n\nmax_depth: Maximum number of splits down any path.\nmin_samples_split: Minimum samples needed to split a node.\nmin_samples_leaf: Minimum samples in a leaf node.\ncriterion: Splitting metric (gini, entropy, squared_error).\n\n\nImporting packages\n\n# Import libraries\nimport pandas as pd\nimport matplotlib.pyplot as plt\nfrom sklearn.datasets import fetch_california_housing, fetch_openml\nfrom sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, plot_tree\nfrom sklearn.model_selection import train_test_split\nimport seaborn as sns\n%matplotlib inline",
+    "crumbs": [
+      "01_decision_tree_basics"
+    ]
+  },
+  {
+    "objectID": "03_random_forest_classification.html",
+    "href": "03_random_forest_classification.html",
+    "title": "🏡 Random Forest Classification with Heart Disease Dataset",
+    "section": "",
+    "text": "# import os\n# # Set working directory manually on Gadi to be able to load csv files\n# user = os.getenv('USER')\n# os.chdir('/scratch/cd82/'+user+'/notebooks/')",
+    "crumbs": [
+      "03_random_forest_classification"
+    ]
+  },
+  {
+    "objectID": "03_random_forest_classification.html#what-is-bagging",
+    "href": "03_random_forest_classification.html#what-is-bagging",
+    "title": "🏡 Random Forest Classification with Heart Disease Dataset",
+    "section": "What is Bagging?",
+    "text": "What is Bagging?\nBagging (Bootstrap Aggregation) is an ensemble learning technique that helps reduce variance by training multiple models on different subsets of the data (with replacement) and combining their outputs. This makes the final model more robust and stable.",
+    "crumbs": [
+      "03_random_forest_classification"
+    ]
+  },
+  {
+    "objectID": "03_random_forest_classification.html#what-is-a-random-forest",
+    "href": "03_random_forest_classification.html#what-is-a-random-forest",
+    "title": "🏡 Random Forest Classification with Heart Disease Dataset",
+    "section": "What is a Random Forest?",
+    "text": "What is a Random Forest?\nRandom Forest is an ensemble of decision trees built using bagging. Each tree is trained on a random subset of the data and a random subset of features. The final prediction is made by majority vote (classification) or average (regression).\nRandom Forests are powerful, easy to use, and work well on many real-world problems.\n\n\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nfrom sklearn.datasets import fetch_openml\nfrom sklearn.ensemble import RandomForestClassifier\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import classification_report, ConfusionMatrixDisplay\nimport shap\n\ndf = pd.read_csv(\"heart.csv\")\nX = df.drop(\"target\", axis=1)\ny = df[\"target\"]\n\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)",
+    "crumbs": [
+      "03_random_forest_classification"
+    ]
+  },
+  {
+    "objectID": "03_random_forest_classification.html#key-hyperparameters-in-random-forest",
+    "href": "03_random_forest_classification.html#key-hyperparameters-in-random-forest",
+    "title": "🏡 Random Forest Classification with Heart Disease Dataset",
+    "section": "🔧 Key Hyperparameters in Random Forest",
+    "text": "🔧 Key Hyperparameters in Random Forest\nWe’ll explore the effect of the following hyperparameters:\n\nn_estimators: Number of trees in the forest.\nmax_depth: Maximum depth of each tree.\nmin_samples_split: The minimum number of samples required to split an internal node.\n\nLet’s see how each of these affects performance!\n\n\nn_vals = [1, 2, 3 ,5 ,8, 10, 50, 100]\ntrain_scores = []\ntest_scores = []\n\nfor n in n_vals:\n    clf = RandomForestClassifier(n_estimators=n, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(clf.score(X_train, y_train))\n    test_scores.append(clf.score(X_test, y_test))\n\nplt.plot(n_vals, train_scores, marker='o', label='Train Accuracy')\nplt.plot(n_vals, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('n_estimators')\nplt.ylabel('Accuracy')\nplt.title('Effect of n_estimators')\nplt.legend()\nplt.grid(True)\nplt.show()\n\n\n\n\n\n\n\n\n\n\ndepths = [2, 4, 6, 8, None]\ntrain_scores, test_scores = [], []\n\nfor d in depths:\n    clf = RandomForestClassifier(max_depth=d, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(clf.score(X_train, y_train))\n    test_scores.append(clf.score(X_test, y_test))\n\nplt.plot([str(d) for d in depths], train_scores, marker='o', label='Train Accuracy')\nplt.plot([str(d) for d in depths], test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('max_depth')\nplt.ylabel('Accuracy')\nplt.title('Effect of max_depth')\nplt.legend()\nplt.grid(True)\nplt.show()\n\n\n\n\n\n\n\n\n\n# Evaluate RandomForestClassifier performance with varying min_samples_split\nsplits = [2, 5, 10, 20, 50]\ntrain_scores, test_scores = [], []\n\nfor s in splits:\n    clf = RandomForestClassifier(min_samples_split=s, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(clf.score(X_train, y_train))\n    test_scores.append(clf.score(X_test, y_test))\n\nplt.plot([str(s) for s in splits], train_scores, marker='o', label='Train Accuracy')\nplt.plot([str(s) for s in splits], test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('min_samples_split')\nplt.ylabel('Accuracy')\nplt.title('Effect of min_samples_split')\nplt.legend()\nplt.grid(True)\nplt.show()",
+    "crumbs": [
+      "03_random_forest_classification"
+    ]
+  },
+  {
+    "objectID": "03_random_forest_classification.html#feature-importance-with-shap",
+    "href": "03_random_forest_classification.html#feature-importance-with-shap",
+    "title": "🏡 Random Forest Classification with Heart Disease Dataset",
+    "section": "🔍 Feature Importance with SHAP",
+    "text": "🔍 Feature Importance with SHAP\nNow let’s interpret the model using SHAP values to see which features were most influential.\n\nfinal_clf = RandomForestClassifier(n_estimators=100, max_depth=8, max_features='sqrt', random_state=42)\nfinal_clf.fit(X_train, y_train)\n\n# Accuracy\ntrain_acc = final_clf.score(X_train, y_train)\ntest_acc = final_clf.score(X_test, y_test)\n\nprint(f\"Train Accuracy: {train_acc:.3f}\")\nprint(f\"Test Accuracy: {test_acc:.3f}\")\n\nTrain Accuracy: 1.000\nTest Accuracy: 0.990\n\n\n\n\ny_pred = final_clf.predict(X_test)\nprint(classification_report(y_test, y_pred))\n\nConfusionMatrixDisplay.from_estimator(final_clf, X_test, y_test)\nplt.title(\"Normalized Confusion Matrix\")\nplt.show()\n\n              precision    recall  f1-score   support\n\n           0       0.98      1.00      0.99       159\n           1       1.00      0.98      0.99       149\n\n    accuracy                           0.99       308\n   macro avg       0.99      0.99      0.99       308\nweighted avg       0.99      0.99      0.99       308",
+    "crumbs": [
+      "03_random_forest_classification"
+    ]
+  },
+  {
+    "objectID": "03_random_forest_classification.html#feature-importance-with-shap-1",
+    "href": "03_random_forest_classification.html#feature-importance-with-shap-1",
+    "title": "🏡 Random Forest Classification with Heart Disease Dataset",
+    "section": "🧠 Feature Importance with SHAP",
+    "text": "🧠 Feature Importance with SHAP\nWe’ll use SHAP (SHapley Additive exPlanations) to understand how different features contribute to the model’s predictions.\nThis helps us: - Identify the most influential features - Understand direction and magnitude of impact\n\n📊 Interpreting the SHAP Summary Plot\nThe SHAP summary plot visualizes how each feature contributes to the model’s output across all samples. Here’s what each component means:\n\n\n\n\n\n\n\nElement\nDescription\n\n\n\n\nY-axis (Feature Names)\nFeatures are sorted by overall importance (top = most important).\n\n\nX-axis (SHAP value)\nThe impact of that feature on the model’s prediction.\n\n\nEach Dot\nA single row/sample in the dataset.\n\n\nColor (Dot Hue)\nThe feature value for that sample — red = high, blue = low.\n\n\nDirection of SHAP Value\nPositive SHAP value pushes the prediction toward the positive class (e.g., “disease” class).\n\n\n\nNegative SHAP value pushes it toward the negative class (e.g., “no disease”).\n\n\n\n🧠 Example Interpretation:\nIf the “Age” feature has mostly red dots (high values) with positive SHAP values, it means higher ages are pushing predictions toward the positive class.\n\nimport shap\n\nexplainer = shap.TreeExplainer(final_clf, X_train)\n\nn_datapoints = 100\nshap_values = explainer.shap_values(X_test[:n_datapoints])\n\nclass_index = 0\nshap.summary_plot(shap_values[:, :, class_index], X_test[:n_datapoints])",
+    "crumbs": [
+      "03_random_forest_classification"
+    ]
+  },
+  {
+    "objectID": "05_random_forest_regression.html",
+    "href": "05_random_forest_regression.html",
+    "title": "🏡 Random Forest Regression with Heart Disease Dataset",
+    "section": "",
+    "text": "Bagging (Bootstrap Aggregation) is an ensemble learning technique that helps reduce variance by training multiple models on different subsets of the data (with replacement) and combining their outputs. This makes the final model more robust and stable.\n\n\n\nRandom Forest is an ensemble of decision trees built using bagging. Each tree is trained on a random subset of the data and a random subset of features. The final prediction is made by majority vote (regression) or average (regression).\nRandom Forests are powerful, easy to use, and work well on many real-world problems.\n\n\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nfrom sklearn.datasets import fetch_openml\nfrom sklearn.ensemble import RandomForestRegressor\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import classification_report, ConfusionMatrixDisplay\nimport shap\nfrom sklearn.metrics import r2_score\nfrom sklearn.datasets import fetch_california_housing\n\n\nhousing = fetch_california_housing(as_frame=True)\ndf = housing.frame\n\nX = housing.data\ny = housing.target\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)\n\n\n\n\n\nWe’ll explore the effect of the following hyperparameters:\n\nn_estimators: Number of trees in the forest.\nmax_depth: Maximum depth of each tree.\nmin_samples_split: The minimum number of samples required to split an internal node.\n\nLet’s see how each of these affects performance!\n\n\nn_vals = [1, 2, 3 ,5 ,8, 10, 50, 100]\ntrain_scores = []\ntest_scores = []\n\nfor n in n_vals:\n    clf = RandomForestRegressor(n_estimators=n, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot(n_vals, train_scores, marker='o', label='Train Accuracy')\nplt.plot(n_vals, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('n_estimators')\nplt.ylabel('Accuracy')\nplt.title('Effect of n_estimators')\nplt.legend()\nplt.grid(True)\nplt.show()\n\n\n\n\n\n\n\n\n\n\ndepths = [2, 4, 6, 8, None]\ntrain_scores, test_scores = [], []\n\nfor d in depths:\n    clf = RandomForestRegressor(max_depth=d, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot([str(d) for d in depths], train_scores, marker='o', label='Train Accuracy')\nplt.plot([str(d) for d in depths], test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('max_depth')\nplt.ylabel('Accuracy')\nplt.title('Effect of max_depth')\nplt.legend()\nplt.grid(True)\nplt.show()\n\n\n\n\n\n\n\n\n\n# Evaluate RandomForestRegressor performance with varying min_samples_split\nsplits = [2, 5, 10, 20, 50]\ntrain_scores, test_scores = [], []\n\nfor s in splits:\n    clf = RandomForestRegressor(min_samples_split=s, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot([str(s) for s in splits], train_scores, marker='o', label='Train Accuracy')\nplt.plot([str(s) for s in splits], test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('min_samples_split')\nplt.ylabel('Accuracy')\nplt.title('Effect of min_samples_split')\nplt.legend()\nplt.grid(True)\nplt.show()\n\n\n\n\n\n\n\n\n\n\n\nNow let’s interpret the model using SHAP values to see which features were most influential.\n\nfinal_clf = RandomForestRegressor(n_estimators=100, max_depth=8, max_features='sqrt', random_state=42)\nfinal_clf.fit(X_train, y_train)\n\n# Accuracy\ntrain_acc = r2_score(y_train, clf.predict(X_train))\ntest_acc = r2_score(y_test, clf.predict(X_test))\n\nprint(f\"Train R2: {train_acc:.3f}\")\nprint(f\"Test R2: {test_acc:.3f}\")\n\nTrain R2: 0.853\nTest R2: 0.780\n\n\n\n\n\nWe’ll use SHAP (SHapley Additive exPlanations) to understand how different features contribute to the model’s predictions.\nThis helps us: - Identify the most influential features - Understand direction and magnitude of impact\n\n\nThe SHAP summary plot visualizes how each feature contributes to the model’s output across all samples. Here’s what each component means:\n\n\n\n\n\n\n\nElement\nDescription\n\n\n\n\nY-axis (Feature Names)\nFeatures are sorted by overall importance (top = most important).\n\n\nX-axis (SHAP value)\nThe impact of that feature on the model’s prediction.\n\n\nEach Dot\nA single row/sample in the dataset.\n\n\nColor (Dot Hue)\nThe feature value for that sample — red = high, blue = low.\n\n\nDirection of SHAP Value\nPositive SHAP value pushes the prediction toward the positive class (e.g., “disease” class).\n\n\n\nNegative SHAP value pushes it toward the negative class (e.g., “no disease”).\n\n\n\n🧠 Example Interpretation:\nIf the “Age” feature has mostly red dots (high values) with positive SHAP values, it means higher ages are pushing predictions toward the positive class.\n\nimport shap\n\nexplainer = shap.Explainer(final_clf, X_train)\nn_datapoints = 100\nshap_values = explainer(X_test[:n_datapoints])\n\nshap.summary_plot(shap_values, X_test[:n_datapoints])",
+    "crumbs": [
+      "05_random_forest_regression"
+    ]
+  },
+  {
+    "objectID": "05_random_forest_regression.html#what-is-bagging",
+    "href": "05_random_forest_regression.html#what-is-bagging",
+    "title": "🏡 Random Forest Regression with Heart Disease Dataset",
+    "section": "",
+    "text": "Bagging (Bootstrap Aggregation) is an ensemble learning technique that helps reduce variance by training multiple models on different subsets of the data (with replacement) and combining their outputs. This makes the final model more robust and stable.",
+    "crumbs": [
+      "05_random_forest_regression"
+    ]
+  },
+  {
+    "objectID": "05_random_forest_regression.html#what-is-a-random-forest",
+    "href": "05_random_forest_regression.html#what-is-a-random-forest",
+    "title": "🏡 Random Forest Regression with Heart Disease Dataset",
+    "section": "",
+    "text": "Random Forest is an ensemble of decision trees built using bagging. Each tree is trained on a random subset of the data and a random subset of features. The final prediction is made by majority vote (regression) or average (regression).\nRandom Forests are powerful, easy to use, and work well on many real-world problems.\n\n\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nfrom sklearn.datasets import fetch_openml\nfrom sklearn.ensemble import RandomForestRegressor\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import classification_report, ConfusionMatrixDisplay\nimport shap\nfrom sklearn.metrics import r2_score\nfrom sklearn.datasets import fetch_california_housing\n\n\nhousing = fetch_california_housing(as_frame=True)\ndf = housing.frame\n\nX = housing.data\ny = housing.target\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)",
+    "crumbs": [
+      "05_random_forest_regression"
+    ]
+  },
+  {
+    "objectID": "05_random_forest_regression.html#key-hyperparameters-in-random-forest",
+    "href": "05_random_forest_regression.html#key-hyperparameters-in-random-forest",
+    "title": "🏡 Random Forest Regression with Heart Disease Dataset",
+    "section": "",
+    "text": "We’ll explore the effect of the following hyperparameters:\n\nn_estimators: Number of trees in the forest.\nmax_depth: Maximum depth of each tree.\nmin_samples_split: The minimum number of samples required to split an internal node.\n\nLet’s see how each of these affects performance!\n\n\nn_vals = [1, 2, 3 ,5 ,8, 10, 50, 100]\ntrain_scores = []\ntest_scores = []\n\nfor n in n_vals:\n    clf = RandomForestRegressor(n_estimators=n, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot(n_vals, train_scores, marker='o', label='Train Accuracy')\nplt.plot(n_vals, test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('n_estimators')\nplt.ylabel('Accuracy')\nplt.title('Effect of n_estimators')\nplt.legend()\nplt.grid(True)\nplt.show()\n\n\n\n\n\n\n\n\n\n\ndepths = [2, 4, 6, 8, None]\ntrain_scores, test_scores = [], []\n\nfor d in depths:\n    clf = RandomForestRegressor(max_depth=d, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot([str(d) for d in depths], train_scores, marker='o', label='Train Accuracy')\nplt.plot([str(d) for d in depths], test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('max_depth')\nplt.ylabel('Accuracy')\nplt.title('Effect of max_depth')\nplt.legend()\nplt.grid(True)\nplt.show()\n\n\n\n\n\n\n\n\n\n# Evaluate RandomForestRegressor performance with varying min_samples_split\nsplits = [2, 5, 10, 20, 50]\ntrain_scores, test_scores = [], []\n\nfor s in splits:\n    clf = RandomForestRegressor(min_samples_split=s, random_state=42)\n    clf.fit(X_train, y_train)\n    train_scores.append(r2_score(y_train, clf.predict(X_train)))\n    test_scores.append(r2_score(y_test, clf.predict(X_test)))\n\nplt.plot([str(s) for s in splits], train_scores, marker='o', label='Train Accuracy')\nplt.plot([str(s) for s in splits], test_scores, marker='s', label='Test Accuracy')\nplt.xlabel('min_samples_split')\nplt.ylabel('Accuracy')\nplt.title('Effect of min_samples_split')\nplt.legend()\nplt.grid(True)\nplt.show()",
+    "crumbs": [
+      "05_random_forest_regression"
+    ]
+  },
+  {
+    "objectID": "05_random_forest_regression.html#feature-importance-with-shap",
+    "href": "05_random_forest_regression.html#feature-importance-with-shap",
+    "title": "🏡 Random Forest Regression with Heart Disease Dataset",
+    "section": "",
+    "text": "Now let’s interpret the model using SHAP values to see which features were most influential.\n\nfinal_clf = RandomForestRegressor(n_estimators=100, max_depth=8, max_features='sqrt', random_state=42)\nfinal_clf.fit(X_train, y_train)\n\n# Accuracy\ntrain_acc = r2_score(y_train, clf.predict(X_train))\ntest_acc = r2_score(y_test, clf.predict(X_test))\n\nprint(f\"Train R2: {train_acc:.3f}\")\nprint(f\"Test R2: {test_acc:.3f}\")\n\nTrain R2: 0.853\nTest R2: 0.780",
+    "crumbs": [
+      "05_random_forest_regression"
+    ]
+  },
+  {
+    "objectID": "05_random_forest_regression.html#feature-importance-with-shap-1",
+    "href": "05_random_forest_regression.html#feature-importance-with-shap-1",
+    "title": "🏡 Random Forest Regression with Heart Disease Dataset",
+    "section": "",
+    "text": "We’ll use SHAP (SHapley Additive exPlanations) to understand how different features contribute to the model’s predictions.\nThis helps us: - Identify the most influential features - Understand direction and magnitude of impact\n\n\nThe SHAP summary plot visualizes how each feature contributes to the model’s output across all samples. Here’s what each component means:\n\n\n\n\n\n\n\nElement\nDescription\n\n\n\n\nY-axis (Feature Names)\nFeatures are sorted by overall importance (top = most important).\n\n\nX-axis (SHAP value)\nThe impact of that feature on the model’s prediction.\n\n\nEach Dot\nA single row/sample in the dataset.\n\n\nColor (Dot Hue)\nThe feature value for that sample — red = high, blue = low.\n\n\nDirection of SHAP Value\nPositive SHAP value pushes the prediction toward the positive class (e.g., “disease” class).\n\n\n\nNegative SHAP value pushes it toward the negative class (e.g., “no disease”).\n\n\n\n🧠 Example Interpretation:\nIf the “Age” feature has mostly red dots (high values) with positive SHAP values, it means higher ages are pushing predictions toward the positive class.\n\nimport shap\n\nexplainer = shap.Explainer(final_clf, X_train)\nn_datapoints = 100\nshap_values = explainer(X_test[:n_datapoints])\n\nshap.summary_plot(shap_values, X_test[:n_datapoints])",
+    "crumbs": [
+      "05_random_forest_regression"
+    ]
+  }
+]

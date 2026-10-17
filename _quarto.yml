@@ -1,0 +1,31 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Decision Tree Methods"
+
+  sidebar:
+    style: docked
+    contents:
+      - text: "Workshop Guide"
+        href: 00_workshop_guide.ipynb
+      - text: "01_decision_tree_basics"
+        href: 01_decision_tree_basics.ipynb
+      - text: "02_logistic_regression"
+        href: 02_logistic_regression.ipynb
+      - text: "03_random_forest_classification"
+        href: 03_random_forest_classification.ipynb
+      - text: "04_xgboost_classification"
+        href: 04_xgboost_classification.ipynb
+      - text: "05_random_forest_regression"
+        href: 05_random_forest_regression.ipynb
+      - text: "06_xgboost_regression"
+        href: 06_xgboost_regression.ipynb
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-location: right
